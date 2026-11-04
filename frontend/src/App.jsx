@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import SummaryCards from './components/SummaryCards';
+import DashboardView from './components/DashboardView';
 import FilterBar from './components/FilterBar';
 import TrackerTable from './components/TrackerTable';
 import KanbanBoard from './components/KanbanBoard';
@@ -24,8 +25,9 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Active View ('table' | 'kanban' | 'feed' | 'matrix')
-  const [activeView, setActiveView] = useState('table');
+  // Active View: 'dashboard' | 'table' | 'kanban' | 'feed' | 'matrix'
+  const [activeView, setActiveView] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Filters State
   const [search, setSearch] = useState('');
@@ -71,7 +73,7 @@ export default function App() {
 
       const [itemsRes, logsRes] = await Promise.all([
         api.getAll(),
-        api.getActivityLogs(60)
+        api.getActivityLogs(100)
       ]);
 
       setItems(itemsRes.data);
@@ -93,7 +95,7 @@ export default function App() {
     fetchData();
   }, [fetchData]);
 
-  // Live updates: silently re-sync every 30s (and when the tab regains focus)
+  // Live updates: silently re-sync every 30s
   useEffect(() => {
     const sync = () => {
       if (document.visibilityState === 'visible') fetchData(false, true);
@@ -117,7 +119,7 @@ export default function App() {
     setDrawerInitialTab(tab);
     setIsDrawerOpen(true);
     try {
-      const logs = await api.getActivityLogs(30, item.ref);
+      const logs = await api.getActivityLogs(40, item.ref);
       setItemHistory(logs);
     } catch (e) {
       setItemHistory([]);
@@ -143,15 +145,22 @@ export default function App() {
       // Update selected drawer item if currently open
       if (selectedItem && selectedItem.ref === ref) {
         setSelectedItem(updated);
-        const freshLogs = await api.getActivityLogs(30, ref);
+        const freshLogs = await api.getActivityLogs(40, ref);
         setItemHistory(freshLogs);
       }
 
       // Refresh global activity logs
-      const freshAllLogs = await api.getActivityLogs(60);
+      const freshAllLogs = await api.getActivityLogs(100);
       setActivityLogs(freshAllLogs);
 
-      addToast(`Saved changes for [${ref}]`);
+      const changeSummary = updates.status 
+        ? `Status: ${updates.status}`
+        : updates.remarks 
+        ? 'Remarks updated' 
+        : updates.partner_owner 
+        ? `Owner: ${updates.partner_owner}`
+        : 'Saved';
+      addToast(`Logged & Saved [${ref}]: ${changeSummary}`);
     } catch (err) {
       console.error('Failed to save activity:', err);
       addToast(`Error saving activity [${ref}]`, 'error');
@@ -169,9 +178,9 @@ export default function App() {
     try {
       const created = await api.createItem(newItem);
       setItems(prev => [created, ...prev]);
-      const freshLogs = await api.getActivityLogs(60);
+      const freshLogs = await api.getActivityLogs(100);
       setActivityLogs(freshLogs);
-      addToast(`Created new deliverable [${created.ref}]`);
+      addToast(`Created & logged new deliverable [${created.ref}]`);
     } catch (err) {
       console.error('Failed to create activity:', err);
       addToast('Failed to create activity', 'error');
@@ -186,7 +195,7 @@ export default function App() {
         setIsDrawerOpen(false);
       }
       await api.deleteItem(ref);
-      const freshLogs = await api.getActivityLogs(60);
+      const freshLogs = await api.getActivityLogs(100);
       setActivityLogs(freshLogs);
       addToast(`Deleted activity [${ref}]`);
     } catch (err) {
@@ -208,8 +217,8 @@ export default function App() {
 
   // Export current list to CSV
   const handleExport = () => {
-    api.exportCsv(filteredItems);
-    addToast(`Exported ${filteredItems.length} activities to CSV`);
+    api.exportCsv(filteredItems.length > 0 ? filteredItems : items);
+    addToast(`Exported ${filteredItems.length > 0 ? filteredItems.length : items.length} activities to CSV`);
   };
 
   // Unique milestones
@@ -252,6 +261,10 @@ export default function App() {
 
     return c;
   }, [items]);
+
+  const completionPct = items.length > 0 
+    ? Math.round(((counts['Completed'] || 0) / items.length) * 100) 
+    : 0;
 
   // Filtered Activities
   const filteredItems = useMemo(() => {
@@ -327,92 +340,120 @@ export default function App() {
   };
 
   return (
-    <div>
-      <Header
+    <div className="app-layout">
+      {/* 5-Tab Navigation Sidebar */}
+      <Sidebar
+        activeView={activeView}
+        setActiveView={setActiveView}
+        logsCount={activityLogs.length}
         isOnline={isOnline}
         theme={theme}
         toggleTheme={toggleTheme}
-        onAddClick={() => setIsAddModalOpen(true)}
-        onExportClick={handleExport}
-        onResetClick={handleReset}
-        onViewLogsClick={() => setActiveView('feed')}
-        logsCount={activityLogs.length}
-        activeView={activeView}
+        completionPct={completionPct}
+        totalDeliverables={items.length}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className="main-wrapper">
-        <SummaryCards
-          counts={counts}
-          activeFilter={statusFilter}
-          onSelectFilter={(val) => {
-            setFilterPreset('');
-            setStatusFilter(prev => prev === val ? '' : val);
-          }}
-          filterPreset={filterPreset}
-          onSelectPreset={(preset) => {
-            setStatusFilter('');
-            setFilterPreset(prev => prev === preset ? '' : preset);
-          }}
-        />
-
-        <FilterBar
-          search={search}
-          setSearch={setSearch}
-          selectedMilestone={selectedMilestone}
-          setSelectedMilestone={setSelectedMilestone}
-          selectedRole={selectedRole}
-          setSelectedRole={setSelectedRole}
-          filterPreset={filterPreset}
-          setFilterPreset={setFilterPreset}
+      {/* Main App Column */}
+      <div className="app-main-content">
+        <Header
+          isOnline={isOnline}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          onAddClick={() => setIsAddModalOpen(true)}
+          onExportClick={handleExport}
+          onResetClick={handleReset}
           activeView={activeView}
-          setActiveView={setActiveView}
-          milestones={milestones}
-          onClear={handleClearFilters}
-          onRefresh={handleRefresh}
-          isRefreshing={isRefreshing}
-          logsCount={activityLogs.length}
+          onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
         />
 
-        {loading ? (
-          <div className="table-container" style={{ padding: '3.5rem', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-muted)' }}>Loading live tracker data...</p>
-          </div>
-        ) : (
-          <>
-            {activeView === 'table' && (
-              <TrackerTable
-                items={filteredItems}
-                onSaveRow={handleSaveRow}
-                onDeleteRow={handleDeleteActivity}
-                onOpenDrawer={handleOpenDrawer}
-                isGrouped={!statusFilter && !search && !filterPreset}
-              />
-            )}
+        <main className="main-viewport">
+          {loading ? (
+            <div className="table-container" style={{ padding: '3.5rem', textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-muted)' }}>Loading live tracker data...</p>
+            </div>
+          ) : (
+            <>
+              {/* Tab 1: Dashboard View */}
+              {activeView === 'dashboard' && (
+                <DashboardView
+                  items={items}
+                  counts={counts}
+                  activityLogs={activityLogs}
+                  onSelectMilestone={handleSelectMilestoneFromMatrix}
+                  onSelectPreset={(preset) => {
+                    handleClearFilters();
+                    setFilterPreset(preset);
+                  }}
+                  onSelectFilter={(val) => {
+                    handleClearFilters();
+                    setStatusFilter(val);
+                  }}
+                  onOpenDrawer={handleOpenDrawer}
+                  onNavigateTab={(tab) => setActiveView(tab)}
+                />
+              )}
 
-            {activeView === 'kanban' && (
-              <KanbanBoard
-                items={filteredItems}
-                onSelectRow={handleOpenDrawer}
-                onQuickStatusChange={handleQuickStatusChange}
-              />
-            )}
+              {/* Filter Bar for Table & Kanban views */}
+              {(activeView === 'table' || activeView === 'kanban') && (
+                <FilterBar
+                  search={search}
+                  setSearch={setSearch}
+                  selectedMilestone={selectedMilestone}
+                  setSelectedMilestone={setSelectedMilestone}
+                  selectedRole={selectedRole}
+                  setSelectedRole={setSelectedRole}
+                  filterPreset={filterPreset}
+                  setFilterPreset={setFilterPreset}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  milestones={milestones}
+                  onClear={handleClearFilters}
+                  onRefresh={handleRefresh}
+                  isRefreshing={isRefreshing}
+                />
+              )}
 
-            {activeView === 'feed' && (
-              <ActivityLogFeed
-                logs={activityLogs}
-                onSelectRef={handleSelectRefFromFeed}
-              />
-            )}
+              {/* Tab 2: Table View */}
+              {activeView === 'table' && (
+                <TrackerTable
+                  items={filteredItems}
+                  onSaveRow={handleSaveRow}
+                  onDeleteRow={handleDeleteActivity}
+                  onOpenDrawer={handleOpenDrawer}
+                  isGrouped={!statusFilter && !search && !filterPreset}
+                />
+              )}
 
-            {activeView === 'matrix' && (
-              <MilestoneMatrix
-                items={items}
-                onSelectMilestone={handleSelectMilestoneFromMatrix}
-              />
-            )}
-          </>
-        )}
-      </main>
+              {/* Tab 3: Kanban Board */}
+              {activeView === 'kanban' && (
+                <KanbanBoard
+                  items={filteredItems}
+                  onSelectRow={handleOpenDrawer}
+                  onQuickStatusChange={handleQuickStatusChange}
+                />
+              )}
+
+              {/* Tab 4: Activity Logs Feed */}
+              {activeView === 'feed' && (
+                <ActivityLogFeed
+                  logs={activityLogs}
+                  onSelectRef={handleSelectRefFromFeed}
+                />
+              )}
+
+              {/* Tab 5: Readiness Matrix */}
+              {activeView === 'matrix' && (
+                <MilestoneMatrix
+                  items={items}
+                  onSelectMilestone={handleSelectMilestoneFromMatrix}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
 
       {/* Activity Details & Quick Fill Drawer */}
       <ActivityDrawer

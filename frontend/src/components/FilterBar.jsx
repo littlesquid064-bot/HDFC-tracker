@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, RotateCcw, Filter, RefreshCw, LayoutList, Kanban, History, BarChart3, AlertTriangle, Calendar } from 'lucide-react';
+import { Search, X, RefreshCw, LayoutList, Kanban } from 'lucide-react';
 
 export default function FilterBar({
   search,
@@ -15,8 +15,7 @@ export default function FilterBar({
   milestones,
   onClear,
   onRefresh,
-  isRefreshing,
-  logsCount = 0
+  isRefreshing
 }) {
   const hasActiveFilters = search || selectedMilestone || selectedRole || filterPreset;
 
@@ -31,46 +30,8 @@ export default function FilterBar({
 
   return (
     <div className="filter-wrapper">
-      {/* Top Row: View Mode Switcher + Preset Quick Filters */}
+      {/* Top Row: Quick Filter Presets + View layout toggle */}
       <div className="filter-top-row">
-        {/* View Switcher */}
-        <div className="view-switcher">
-          <button
-            className={`view-btn ${activeView === 'table' ? 'active' : ''}`}
-            onClick={() => setActiveView('table')}
-          >
-            <LayoutList size={15} />
-            <span>Table View</span>
-          </button>
-          <button
-            className={`view-btn ${activeView === 'kanban' ? 'active' : ''}`}
-            onClick={() => setActiveView('kanban')}
-          >
-            <Kanban size={15} />
-            <span>Kanban Board</span>
-          </button>
-          <button
-            className={`view-btn ${activeView === 'feed' ? 'active' : ''}`}
-            onClick={() => setActiveView('feed')}
-            title="View full audit log of updates"
-          >
-            <History size={15} />
-            <span>Activity Logs</span>
-            {logsCount > 0 && (
-              <span className="view-count-badge">
-                {logsCount}
-              </span>
-            )}
-          </button>
-          <button
-            className={`view-btn ${activeView === 'matrix' ? 'active' : ''}`}
-            onClick={() => setActiveView('matrix')}
-          >
-            <BarChart3 size={15} />
-            <span>Readiness Matrix</span>
-          </button>
-        </div>
-
         {/* Quick Filter Presets */}
         <div className="preset-pills-list">
           {presets.map((p) => (
@@ -83,6 +44,28 @@ export default function FilterBar({
             </button>
           ))}
         </div>
+
+        {/* Quick Table/Kanban toggle if in one of those views */}
+        {(activeView === 'table' || activeView === 'kanban') && (
+          <div className="view-switcher" style={{ margin: 0 }}>
+            <button
+              className={`view-btn ${activeView === 'table' ? 'active' : ''}`}
+              onClick={() => setActiveView('table')}
+              title="Table view with grouped milestones"
+            >
+              <LayoutList size={14} />
+              <span>Table</span>
+            </button>
+            <button
+              className={`view-btn ${activeView === 'kanban' ? 'active' : ''}`}
+              onClick={() => setActiveView('kanban')}
+              title="Kanban columns by status"
+            >
+              <Kanban size={14} />
+              <span>Kanban</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Bottom Row: Search, Milestone Dropdown, Role Filter, Refresh */}
