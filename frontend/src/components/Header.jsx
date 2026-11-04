@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Plus, Sun, Moon, RotateCcw, Menu, Sparkles } from 'lucide-react';
+import { Download, Plus, Sun, Moon, RotateCcw, Menu } from 'lucide-react';
 
 const VIEW_TITLES = {
   dashboard: { title: 'Dashboard', sub: 'Executive overview, launch readiness & KPIs' },
@@ -41,12 +41,12 @@ export default function Header({
       </div>
 
       <div className="header-actions">
-
-        {/* Theme Toggle */}
+        {/* Theme Toggle (Light / Dark) */}
         <button 
           className="btn btn-ghost-dark" 
           onClick={toggleTheme} 
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+          aria-label="Toggle theme"
         >
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>
