@@ -150,10 +150,9 @@ export default function Sidebar({
 
         {/* Sidebar Footer */}
         <div className="sidebar-footer">
-          {/* Live Status Pill */}
-          <div className="sidebar-live-pill" title={isOnline ? 'Connected to live MongoDB/API backend' : 'Running in local cache mode'}>
-            <div className={`pulse-dot ${isOnline ? '' : 'offline'}`} />
-            <span>{isOnline ? 'Live Backend' : 'Local Mode'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Theme:</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'capitalize' }}>{theme}</span>
           </div>
 
           {/* Theme Toggle Button */}

@@ -41,11 +41,6 @@ export default function Header({
       </div>
 
       <div className="header-actions">
-        {/* Connection Status Pill */}
-        <div className="live-pill" title={isOnline ? 'Connected to Backend API' : 'Using Local Storage Cache'}>
-          <div className={`pulse-dot ${isOnline ? '' : 'offline'}`} />
-          <span>{isOnline ? 'Live API' : 'Local Mode'}</span>
-        </div>
 
         {/* Theme Toggle */}
         <button 
