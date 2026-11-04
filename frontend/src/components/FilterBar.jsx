@@ -15,7 +15,8 @@ export default function FilterBar({
   milestones,
   onClear,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  logsCount = 0
 }) {
   const hasActiveFilters = search || selectedMilestone || selectedRole || filterPreset;
 
@@ -51,9 +52,15 @@ export default function FilterBar({
           <button
             className={`view-btn ${activeView === 'feed' ? 'active' : ''}`}
             onClick={() => setActiveView('feed')}
+            title="View full audit log of updates"
           >
             <History size={15} />
-            <span>What's Happened</span>
+            <span>Activity Logs</span>
+            {logsCount > 0 && (
+              <span className="view-count-badge">
+                {logsCount}
+              </span>
+            )}
           </button>
           <button
             className={`view-btn ${activeView === 'matrix' ? 'active' : ''}`}

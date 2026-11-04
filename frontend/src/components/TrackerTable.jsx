@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, Check, X, Trash2, Calendar, User, Clock, ArrowRight, AlertTriangle, MessageSquare, ChevronDown } from 'lucide-react';
+import { Edit3, Check, X, Trash2, Calendar, User, Clock, ArrowRight, AlertTriangle, MessageSquare, ChevronDown, History } from 'lucide-react';
 
 const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Ongoing', 'Completed', 'On Hold'];
 
@@ -221,10 +221,17 @@ export default function TrackerTable({
                     <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                       <button
                         className="btn-icon"
-                        onClick={() => onOpenDrawer(item)}
-                        title="Open Details & History Drawer"
+                        onClick={() => onOpenDrawer(item, 'update')}
+                        title="Edit deliverable details"
                       >
                         <Edit3 size={13} />
+                      </button>
+                      <button
+                        className="btn-icon"
+                        onClick={() => onOpenDrawer(item, 'history')}
+                        title="View activity & update logs for this item"
+                      >
+                        <History size={13} />
                       </button>
                       <button
                         className="btn-icon text-danger"

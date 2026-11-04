@@ -37,6 +37,7 @@ export default function App() {
   // Drawer & Modal State
   const [selectedItem, setSelectedItem] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerInitialTab, setDrawerInitialTab] = useState('update');
   const [itemHistory, setItemHistory] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -111,8 +112,9 @@ export default function App() {
   };
 
   // Open Drawer for an item and load its specific history
-  const handleOpenDrawer = async (item) => {
+  const handleOpenDrawer = async (item, tab = 'update') => {
     setSelectedItem(item);
+    setDrawerInitialTab(tab);
     setIsDrawerOpen(true);
     try {
       const logs = await api.getActivityLogs(30, item.ref);
@@ -333,6 +335,9 @@ export default function App() {
         onAddClick={() => setIsAddModalOpen(true)}
         onExportClick={handleExport}
         onResetClick={handleReset}
+        onViewLogsClick={() => setActiveView('feed')}
+        logsCount={activityLogs.length}
+        activeView={activeView}
       />
 
       <main className="main-wrapper">
@@ -365,6 +370,7 @@ export default function App() {
           onClear={handleClearFilters}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
+          logsCount={activityLogs.length}
         />
 
         {loading ? (
@@ -415,6 +421,7 @@ export default function App() {
         onClose={() => setIsDrawerOpen(false)}
         onSave={handleSaveRow}
         historyLogs={itemHistory}
+        initialTab={drawerInitialTab}
       />
 
       {/* Add Deliverable Modal */}

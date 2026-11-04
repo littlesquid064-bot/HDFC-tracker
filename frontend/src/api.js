@@ -172,20 +172,98 @@ export const api = {
       items[index] = updated;
       saveLocalData(items);
 
-      // Record local log
-      saveLocalLog({
-        id: `log-${Date.now()}`,
-        ref: updated.ref,
-        milestone: updated.milestone,
-        activity: updated.activity,
-        author: updates.partner_owner || oldItem.partner_owner || author,
-        field: updates.status !== oldItem.status ? 'status' : 'remarks',
-        oldValue: oldItem.status,
-        newValue: updates.status || oldItem.status,
-        remarks: updates.remarks || '',
-        timestamp: new Date().toISOString(),
-        action: updates.status === 'Completed' ? 'completed' : 'updated'
-      });
+      // Record local logs for each changed property
+      const authorName = updates.partner_owner || oldItem.partner_owner || author;
+      let recordedChange = false;
+
+      // 1. Status Change
+      if (updates.status && updates.status !== oldItem.status) {
+        saveLocalLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          ref: updated.ref,
+          milestone: updated.milestone,
+          activity: updated.activity,
+          author: authorName,
+          field: 'status',
+          oldValue: oldItem.status || 'Not Started',
+          newValue: updates.status,
+          remarks: updates.remarks || updated.remarks || '',
+          timestamp: new Date().toISOString(),
+          action: updates.status === 'Completed' ? 'completed' : 'status_change'
+        });
+        recordedChange = true;
+      }
+
+      // 2. Remarks Update
+      if (updates.remarks !== undefined && updates.remarks !== (oldItem.remarks || '')) {
+        saveLocalLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          ref: updated.ref,
+          milestone: updated.milestone,
+          activity: updated.activity,
+          author: authorName,
+          field: 'remarks',
+          oldValue: (oldItem.remarks || '').substring(0, 50),
+          newValue: updates.remarks.substring(0, 50),
+          remarks: updates.remarks,
+          timestamp: new Date().toISOString(),
+          action: 'remark_added'
+        });
+        recordedChange = true;
+      }
+
+      // 3. Owner Reassignment
+      if (updates.partner_owner !== undefined && updates.partner_owner !== (oldItem.partner_owner || '')) {
+        saveLocalLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          ref: updated.ref,
+          milestone: updated.milestone,
+          activity: updated.activity,
+          author: authorName,
+          field: 'owner',
+          oldValue: oldItem.partner_owner || 'Unassigned',
+          newValue: updates.partner_owner,
+          remarks: updates.remarks || '',
+          timestamp: new Date().toISOString(),
+          action: 'owner_changed'
+        });
+        recordedChange = true;
+      }
+
+      // 4. Timeline Change
+      if ((updates.start && updates.start !== oldItem.start) || (updates.end && updates.end !== oldItem.end)) {
+        saveLocalLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          ref: updated.ref,
+          milestone: updated.milestone,
+          activity: updated.activity,
+          author: authorName,
+          field: 'timeline',
+          oldValue: `${oldItem.start || ''} to ${oldItem.end || ''}`,
+          newValue: `${updated.start || ''} to ${updated.end || ''}`,
+          remarks: updates.remarks || '',
+          timestamp: new Date().toISOString(),
+          action: 'timeline_changed'
+        });
+        recordedChange = true;
+      }
+
+      // 5. Fallback
+      if (!recordedChange) {
+        saveLocalLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          ref: updated.ref,
+          milestone: updated.milestone,
+          activity: updated.activity,
+          author: authorName,
+          field: 'details',
+          oldValue: '',
+          newValue: 'Updated deliverable details',
+          remarks: updates.remarks || '',
+          timestamp: new Date().toISOString(),
+          action: 'updated'
+        });
+      }
 
       return updated;
     }

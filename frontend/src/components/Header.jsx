@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Plus, Sun, Moon, RotateCcw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Download, Plus, Sun, Moon, RotateCcw, CheckCircle2, AlertCircle, History } from 'lucide-react';
 
 export default function Header({
   isOnline,
@@ -7,7 +7,10 @@ export default function Header({
   toggleTheme,
   onAddClick,
   onExportClick,
-  onResetClick
+  onResetClick,
+  onViewLogsClick,
+  logsCount = 0,
+  activeView
 }) {
   return (
     <header className="header-container">
@@ -60,6 +63,22 @@ export default function Header({
           >
             <Download size={15} />
             <span>Export CSV</span>
+          </button>
+
+          {/* Activity Logs */}
+          <button 
+            className={`btn ${activeView === 'feed' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={onViewLogsClick}
+            title="View activity and update logs"
+            style={{ position: 'relative' }}
+          >
+            <History size={15} />
+            <span>Logs</span>
+            {logsCount > 0 && (
+              <span className="header-log-badge">
+                {logsCount}
+              </span>
+            )}
           </button>
 
           {/* Add Activity */}

@@ -8,14 +8,15 @@ export default function ActivityDrawer({
   isOpen,
   onClose,
   onSave,
-  historyLogs = []
+  historyLogs = [],
+  initialTab = 'update'
 }) {
   const [status, setStatus] = useState('');
   const [remarks, setRemarks] = useState('');
   const [actualCompletion, setActualCompletion] = useState('');
   const [owner, setOwner] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [activeTab, setActiveTab] = useState('update'); // 'update' | 'history'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'update' | 'history'
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -25,8 +26,9 @@ export default function ActivityDrawer({
       setActualCompletion(item.actual_completion || '');
       setOwner(item.partner_owner || '');
       setNewComment('');
+      setActiveTab(initialTab);
     }
-  }, [item]);
+  }, [item, initialTab, isOpen]);
 
   if (!isOpen || !item) return null;
 
@@ -125,7 +127,7 @@ export default function ActivityDrawer({
             onClick={() => setActiveTab('history')}
           >
             <History size={14} />
-            <span>What's Happened ({historyLogs.length})</span>
+            <span>Activity Logs ({historyLogs.length})</span>
           </button>
         </div>
 
@@ -244,19 +246,32 @@ export default function ActivityDrawer({
                       {log.field === 'status' ? (
                         <span>
                           Changed status from <strong>{log.oldValue}</strong> to{' '}
-                          <span className={`status-badge status-${log.newValue.toLowerCase().replace(/\s+/g, '')}`}>
+                          <span className={`status-badge status-${(log.newValue || '').toLowerCase().replace(/\s+/g, '')}`}>
                             {log.newValue}
                           </span>
                         </span>
                       ) : log.field === 'remarks' ? (
-                        <span>Updated progress remarks</span>
+                        <span>Updated progress notes & remarks</span>
+                      ) : log.field === 'owner' ? (
+                        <span>
+                          Reassigned owner from <strong>{log.oldValue || 'Unassigned'}</strong> to <strong>{log.newValue}</strong>
+                        </span>
+                      ) : log.field === 'timeline' ? (
+                        <span>
+                          Adjusted timeline: <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{log.oldValue}</span> &rarr; <strong>{log.newValue}</strong>
+                        </span>
                       ) : (
-                        <span>{log.action}</span>
+                        <span>{log.newValue || log.action || 'Updated deliverable'}</span>
                       )}
                     </div>
-                    {log.remarks && (
+                    {log.remarks && log.field !== 'status' && (
                       <div className="history-event-quote">
                         "{log.remarks}"
+                      </div>
+                    )}
+                    {log.remarks && log.field === 'status' && (
+                      <div className="history-event-quote" style={{ marginTop: '4px' }}>
+                        Note: "{log.remarks}"
                       </div>
                     )}
                   </div>

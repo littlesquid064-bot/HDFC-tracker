@@ -143,6 +143,7 @@ class DataStore {
       this.activityLogs = this.activityLogs.slice(0, 500);
     }
     this.saveLogs();
+    console.log(`[ACTIVITY LOG] [${entry.ref}] ${entry.action ? entry.action.toUpperCase() : 'UPDATE'}: ${entry.field || ''} -> ${entry.newValue || ''} (by ${entry.author || 'User'})`);
     return entry;
   }
 
@@ -215,40 +216,83 @@ class DataStore {
       updated.actual_completion = new Date().toISOString().split('T')[0];
     }
 
-    // Record audit event
+    const logAuthor = updates.partner_owner || current.partner_owner || author;
+    let recordedChange = false;
+
+    // 1. Status Change
     if (updates.status && updates.status !== current.status) {
       this.recordActivity({
         ref: current.ref,
         milestone: current.milestone,
         activity: current.activity,
-        author: updates.partner_owner || current.partner_owner || author,
+        author: logAuthor,
         field: 'status',
         oldValue: current.status || 'Not Started',
         newValue: updates.status,
         remarks: updates.remarks || current.remarks || '',
         action: updates.status === 'Completed' ? 'completed' : 'status_change'
       });
-    } else if (updates.remarks && updates.remarks !== current.remarks) {
+      recordedChange = true;
+    }
+
+    // 2. Remarks Update
+    if (updates.remarks !== undefined && updates.remarks !== (current.remarks || '')) {
       this.recordActivity({
         ref: current.ref,
         milestone: current.milestone,
         activity: current.activity,
-        author: updates.partner_owner || current.partner_owner || author,
+        author: logAuthor,
         field: 'remarks',
-        oldValue: (current.remarks || '').substring(0, 30),
-        newValue: updates.remarks.substring(0, 30),
+        oldValue: (current.remarks || '').substring(0, 50),
+        newValue: updates.remarks.substring(0, 50),
         remarks: updates.remarks,
         action: 'remark_added'
       });
-    } else {
+      recordedChange = true;
+    }
+
+    // 3. Partner / Owner Reassignment
+    if (updates.partner_owner !== undefined && updates.partner_owner !== (current.partner_owner || '')) {
       this.recordActivity({
         ref: current.ref,
         milestone: current.milestone,
         activity: current.activity,
-        author: updates.partner_owner || current.partner_owner || author,
+        author: logAuthor,
+        field: 'owner',
+        oldValue: current.partner_owner || 'Unassigned',
+        newValue: updates.partner_owner,
+        remarks: updates.remarks || '',
+        action: 'owner_changed'
+      });
+      recordedChange = true;
+    }
+
+    // 4. Timeline / Dates Change
+    if ((updates.start && updates.start !== current.start) || (updates.end && updates.end !== current.end)) {
+      this.recordActivity({
+        ref: current.ref,
+        milestone: current.milestone,
+        activity: current.activity,
+        author: logAuthor,
+        field: 'timeline',
+        oldValue: `${current.start || ''} to ${current.end || ''}`,
+        newValue: `${updated.start || ''} to ${updated.end || ''}`,
+        remarks: updates.remarks || '',
+        action: 'timeline_changed'
+      });
+      recordedChange = true;
+    }
+
+    // 5. Fallback if other fields changed
+    if (!recordedChange) {
+      this.recordActivity({
+        ref: current.ref,
+        milestone: current.milestone,
+        activity: current.activity,
+        author: logAuthor,
         field: 'details',
         oldValue: '',
-        newValue: 'Updated',
+        newValue: 'Updated deliverable details',
         remarks: updates.remarks || '',
         action: 'updated'
       });
