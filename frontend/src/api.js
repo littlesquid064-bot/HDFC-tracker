@@ -384,5 +384,86 @@ export const api = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  async getTableConfig(tableId = 'deliverables') {
+    try {
+      const res = await fetch(`${API_BASE}/columns?tableId=${encodeURIComponent(tableId)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          if (json.data.customColumns) {
+            localStorage.setItem('hdfc_table_custom_columns', JSON.stringify(json.data.customColumns));
+          }
+          if (json.data.columnOrder) {
+            localStorage.setItem('hdfc_table_columns_order', JSON.stringify(json.data.columnOrder));
+          }
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend /columns unreachable, using local storage.');
+    }
+
+    try {
+      const rawCols = localStorage.getItem('hdfc_table_custom_columns');
+      const rawOrder = localStorage.getItem('hdfc_table_columns_order');
+      return {
+        name: 'Deliverables Table',
+        customColumns: rawCols ? JSON.parse(rawCols) : [],
+        columnOrder: rawOrder ? JSON.parse(rawOrder) : ['ref', 'role', 'activity', 'owner', 'timeline', 'status', 'remarks', 'actions']
+      };
+    } catch (e) {
+      return {
+        name: 'Deliverables Table',
+        customColumns: [],
+        columnOrder: ['ref', 'role', 'activity', 'owner', 'timeline', 'status', 'remarks', 'actions']
+      };
+    }
+  },
+
+  async saveTableConfig(config, tableId = 'deliverables') {
+    // 1. Immediately update local storage cache
+    try {
+      if (config.customColumns) {
+        localStorage.setItem('hdfc_table_custom_columns', JSON.stringify(config.customColumns));
+      }
+      if (config.columnOrder) {
+        localStorage.setItem('hdfc_table_columns_order', JSON.stringify(config.columnOrder));
+      }
+    } catch (e) {}
+
+    // 2. Persist to MongoDB backend
+    try {
+      const res = await fetch(`${API_BASE}/columns`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...config, tableId })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch (e) {
+      console.warn('Failed to persist table config to MongoDB backend:', e);
+    }
+
+    return config;
+  },
+
+  async getAllTables() {
+    try {
+      const res = await fetch(`${API_BASE}/tables`);
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch (e) {}
+    return [
+      {
+        _id: 'deliverables',
+        name: 'Deliverables Table'
+      }
+    ];
   }
 };

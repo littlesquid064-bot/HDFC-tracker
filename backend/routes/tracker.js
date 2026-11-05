@@ -45,6 +45,38 @@ router.get('/milestones', (req, res) => {
   }
 });
 
+// GET table columns / configuration from MongoDB
+router.get('/columns', (req, res) => {
+  try {
+    const tableId = req.query.tableId || 'deliverables';
+    const config = db.getTableConfig(tableId);
+    res.json({ success: true, data: config });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT update table columns / configuration in MongoDB
+router.put('/columns', async (req, res) => {
+  try {
+    const { customColumns, columnOrder, name, tableId = 'deliverables' } = req.body;
+    const saved = await db.saveTableConfig({ customColumns, columnOrder, name }, tableId);
+    res.json({ success: true, message: 'Table columns saved to MongoDB', data: saved });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET all tables from MongoDB
+router.get('/tables', async (req, res) => {
+  try {
+    const tables = await db.getAllTables();
+    res.json({ success: true, count: tables.length, data: tables });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET export as CSV
 router.get('/export/csv', (req, res) => {
   try {

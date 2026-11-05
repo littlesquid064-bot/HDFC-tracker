@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import AddColumnModal from './AddColumnModal';
 import ColumnManagerModal from './ColumnManagerModal';
+import { api } from '../api';
 
 const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Ongoing', 'Completed', 'On Hold'];
 const ROLE_OPTIONS = ['Lead', 'Support'];
@@ -169,19 +170,31 @@ export default function TrackerTable({
     }
   }, [isInlineRowOpen]);
 
-  // Keep columnOrder in sync with activeColumns IDs and save to localStorage
+  // Load table configuration and custom columns from MongoDB on mount
+  useEffect(() => {
+    api.getTableConfig().then(config => {
+      if (config) {
+        if (config.customColumns && Array.isArray(config.customColumns)) {
+          setCustomColumns(config.customColumns);
+        }
+        if (config.columnOrder && Array.isArray(config.columnOrder)) {
+          setColumnOrder(config.columnOrder);
+        }
+      }
+    }).catch(err => {
+      console.warn('Could not load table config from MongoDB:', err);
+    });
+  }, []);
+
+  // Keep columnOrder in sync with activeColumns IDs and save to MongoDB & localStorage
   const updateColumnOrder = (newOrder) => {
     setColumnOrder(newOrder);
-    try {
-      localStorage.setItem(STORAGE_KEYS.COLUMNS_ORDER, JSON.stringify(newOrder));
-    } catch (e) {}
+    api.saveTableConfig({ customColumns, columnOrder: newOrder });
   };
 
   const updateCustomColumns = (newCols) => {
     setCustomColumns(newCols);
-    try {
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_COLUMNS, JSON.stringify(newCols));
-    } catch (e) {}
+    api.saveTableConfig({ customColumns: newCols, columnOrder });
   };
 
   // Move column by swapping indices
@@ -193,7 +206,8 @@ export default function TrackerTable({
     const newOrder = activeColumns.map(c => c.id);
     const [moved] = newOrder.splice(fromIndex, 1);
     newOrder.splice(toIndex, 0, moved);
-    updateColumnOrder(newOrder);
+    setColumnOrder(newOrder);
+    api.saveTableConfig({ customColumns, columnOrder: newOrder });
   };
 
   // Move a column after next (Shift right)
@@ -247,7 +261,7 @@ export default function TrackerTable({
     setDragOverColId(null);
   };
 
-  // Add new custom column
+  // Add new custom column - persists directly to MongoDB
   const handleAddColumn = ({ name, type, insertAfter }) => {
     const colId = `custom_${Date.now()}`;
     const newCol = {
@@ -260,7 +274,7 @@ export default function TrackerTable({
     };
 
     const newCustomList = [...customColumns, newCol];
-    updateCustomColumns(newCustomList);
+    setCustomColumns(newCustomList);
 
     // Insert into order
     const currentOrder = activeColumns.map(c => c.id);
@@ -271,21 +285,27 @@ export default function TrackerTable({
     }
 
     currentOrder.splice(insertIdx, 0, colId);
-    updateColumnOrder(currentOrder);
+    setColumnOrder(currentOrder);
+
+    // Persist to MongoDB
+    api.saveTableConfig({ customColumns: newCustomList, columnOrder: currentOrder });
   };
 
-  // Delete custom column
+  // Delete custom column - persists directly to MongoDB
   const handleDeleteCustomColumn = (colId) => {
     const updated = customColumns.filter(c => c.id !== colId);
-    updateCustomColumns(updated);
     const newOrder = columnOrder.filter(id => id !== colId);
-    updateColumnOrder(newOrder);
+    setCustomColumns(updated);
+    setColumnOrder(newOrder);
+    api.saveTableConfig({ customColumns: updated, columnOrder: newOrder });
   };
 
-  // Reset to default columns layout
+  // Reset to default columns layout in MongoDB
   const handleResetColumns = () => {
-    updateCustomColumns([]);
-    updateColumnOrder(DEFAULT_COLUMNS.map(c => c.id));
+    const defaultOrder = DEFAULT_COLUMNS.map(c => c.id);
+    setCustomColumns([]);
+    setColumnOrder(defaultOrder);
+    api.saveTableConfig({ customColumns: [], columnOrder: defaultOrder });
     setIsColumnManagerOpen(false);
   };
 

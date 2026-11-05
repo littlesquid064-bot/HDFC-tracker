@@ -25,16 +25,22 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Active View: 'dashboard' | 'table' | 'kanban' | 'feed' | 'matrix'
-  const [activeView, setActiveView] = useState('dashboard');
+  // Active View: 'dashboard' | 'table' | 'kanban' | 'feed' | 'matrix' (persisted across refreshes)
+  const [activeView, setActiveView] = useState(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    if (['dashboard', 'table', 'kanban', 'feed', 'matrix'].includes(hash)) {
+      return hash;
+    }
+    return localStorage.getItem('hdfc_active_view') || 'dashboard';
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Filters State
+  // Filters State (persisted across refreshes)
   const [search, setSearch] = useState('');
-  const [selectedMilestone, setSelectedMilestone] = useState('');
-  const [selectedRole, setSelectedRole] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [filterPreset, setFilterPreset] = useState('');
+  const [selectedMilestone, setSelectedMilestone] = useState(() => localStorage.getItem('hdfc_filter_milestone') || '');
+  const [selectedRole, setSelectedRole] = useState(() => localStorage.getItem('hdfc_filter_role') || '');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('hdfc_filter_status') || '');
+  const [filterPreset, setFilterPreset] = useState(() => localStorage.getItem('hdfc_filter_preset') || '');
 
   // Drawer & Modal State
   const [selectedItem, setSelectedItem] = useState(null);
@@ -63,6 +69,34 @@ export default function App() {
     localStorage.setItem('hdfc_theme', theme);
   }, [theme]);
 
+  // Persist active view to localStorage and keep URL hash in sync
+  useEffect(() => {
+    localStorage.setItem('hdfc_active_view', activeView);
+    if (window.location.hash !== `#${activeView}`) {
+      window.history.replaceState(null, '', `#${activeView}`);
+    }
+  }, [activeView]);
+
+  // Support browser Back / Forward buttons via hash navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (['dashboard', 'table', 'kanban', 'feed', 'matrix'].includes(hash)) {
+        setActiveView(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Persist filter selections
+  useEffect(() => {
+    localStorage.setItem('hdfc_filter_milestone', selectedMilestone);
+    localStorage.setItem('hdfc_filter_role', selectedRole);
+    localStorage.setItem('hdfc_filter_status', statusFilter);
+    localStorage.setItem('hdfc_filter_preset', filterPreset);
+  }, [selectedMilestone, selectedRole, statusFilter, filterPreset]);
+
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
@@ -85,13 +119,17 @@ export default function App() {
       const health = await api.checkHealth();
       setIsOnline(health.isBackendOnline);
 
-      const [itemsRes, logsRes] = await Promise.all([
+      const [itemsRes, logsRes, tableConfigRes] = await Promise.all([
         api.getAll(),
-        api.getActivityLogs(100)
+        api.getActivityLogs(100),
+        api.getTableConfig()
       ]);
 
       setItems(itemsRes.data);
       setActivityLogs(logsRes);
+      if (tableConfigRes?.customColumns) {
+        setColumnsCount(8 + (tableConfigRes.customColumns.length || 0));
+      }
 
       if (showToastIndicator) {
         addToast(itemsRes.source === 'backend' ? 'Synced with live database' : 'Loaded latest local data');
@@ -339,6 +377,12 @@ export default function App() {
     setSelectedRole('');
     setStatusFilter('');
     setFilterPreset('');
+    try {
+      localStorage.removeItem('hdfc_filter_milestone');
+      localStorage.removeItem('hdfc_filter_role');
+      localStorage.removeItem('hdfc_filter_status');
+      localStorage.removeItem('hdfc_filter_preset');
+    } catch (e) {}
   };
 
   const handleSelectRefFromFeed = (ref) => {

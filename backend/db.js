@@ -12,6 +12,7 @@ class DataStore {
   constructor() {
     this.items = [];
     this.activityLogs = [];
+    this.tableConfig = null;
     this.isPersisting = true;
     this.useDb = !!MONGODB_URI;
     this.writeChain = Promise.resolve();
@@ -42,6 +43,27 @@ class DataStore {
       console.log(`Migrated ${this.items.length} items and ${this.activityLogs.length} log entries to MongoDB`);
     }
     console.log(`Loaded ${this.items.length} items from MongoDB`);
+
+    // Load table configuration / custom columns from MongoDB "tables" collection
+    try {
+      const tableDoc = await mongoDb.collection('tables').findOne({ _id: 'deliverables' });
+      if (tableDoc) {
+        this.tableConfig = {
+          name: tableDoc.name || 'Deliverables Table',
+          customColumns: tableDoc.customColumns || [],
+          columnOrder: tableDoc.columnOrder || []
+        };
+        console.log(`Loaded table configuration from MongoDB (${this.tableConfig.customColumns.length} custom columns)`);
+      } else {
+        this.tableConfig = {
+          name: 'Deliverables Table',
+          customColumns: [],
+          columnOrder: ['ref', 'role', 'activity', 'owner', 'timeline', 'status', 'remarks', 'actions']
+        };
+      }
+    } catch (err) {
+      console.warn('Could not load table configuration from MongoDB:', err.message);
+    }
   }
 
   // Serialised write-through: upsert current docs (with order), delete the rest.
@@ -98,6 +120,13 @@ class DataStore {
           });
         this.saveLogs();
       }
+
+      const tablesFile = path.join(__dirname, 'data', 'tables.json');
+      if (fs.existsSync(tablesFile)) {
+        try {
+          this.tableConfig = JSON.parse(fs.readFileSync(tablesFile, 'utf8'));
+        } catch (e) {}
+      }
     } catch (err) {
       console.warn('Warning: Persistent store not accessible, using memory store:', err.message);
       this.isPersisting = false;
@@ -105,6 +134,68 @@ class DataStore {
         this.items = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
       }
     }
+  }
+
+  getTableConfig(tableId = 'deliverables') {
+    return this.tableConfig || {
+      name: 'Deliverables Table',
+      customColumns: [],
+      columnOrder: ['ref', 'role', 'activity', 'owner', 'timeline', 'status', 'remarks', 'actions']
+    };
+  }
+
+  async saveTableConfig(config, tableId = 'deliverables') {
+    this.tableConfig = {
+      name: config.name || 'Deliverables Table',
+      customColumns: config.customColumns || [],
+      columnOrder: config.columnOrder || []
+    };
+
+    if (this.useDb && mongoDb) {
+      try {
+        await mongoDb.collection('tables').replaceOne(
+          { _id: tableId },
+          {
+            _id: tableId,
+            name: this.tableConfig.name,
+            customColumns: this.tableConfig.customColumns,
+            columnOrder: this.tableConfig.columnOrder,
+            updatedAt: new Date().toISOString()
+          },
+          { upsert: true }
+        );
+        console.log(`Saved table config for "${tableId}" to MongoDB`);
+      } catch (err) {
+        console.error('Failed to persist table config to MongoDB:', err.message);
+      }
+    }
+
+    try {
+      const dir = path.dirname(STORE_FILE);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const tablesFile = path.join(__dirname, 'data', 'tables.json');
+      fs.writeFileSync(tablesFile, JSON.stringify(this.tableConfig, null, 2), 'utf8');
+    } catch (e) {}
+
+    return this.tableConfig;
+  }
+
+  async getAllTables() {
+    if (this.useDb && mongoDb) {
+      try {
+        const docs = await mongoDb.collection('tables').find({}).toArray();
+        if (docs.length > 0) return docs;
+      } catch (e) {}
+    }
+    return [
+      {
+        _id: 'deliverables',
+        name: 'Deliverables Table',
+        customColumns: this.tableConfig?.customColumns || [],
+        columnOrder: this.tableConfig?.columnOrder || [],
+        updatedAt: new Date().toISOString()
+      }
+    ];
   }
 
   save() {
@@ -315,6 +406,7 @@ class DataStore {
     }
 
     const item = {
+      ...newItem,
       ref: newItem.ref,
       milestone: newItem.milestone || 'General',
       activity: newItem.activity || '',
