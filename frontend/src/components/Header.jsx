@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Plus, Sun, Moon, RotateCcw, Menu } from 'lucide-react';
+import { Download, Plus, Sun, Moon, Menu } from 'lucide-react';
 
 const VIEW_TITLES = {
   dashboard: { title: 'Dashboard', sub: 'Executive overview, launch readiness & KPIs' },
@@ -49,16 +49,6 @@ export default function Header({
           aria-label="Toggle theme"
         >
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
-
-        {/* Reset to Default */}
-        <button 
-          className="btn btn-secondary" 
-          onClick={onResetClick}
-          title="Reset tracker to original seed data"
-        >
-          <RotateCcw size={14} />
-          <span className="btn-label-desktop">Reset</span>
         </button>
 
         {/* Export to CSV */}

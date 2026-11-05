@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, RefreshCw, LayoutList, Kanban } from 'lucide-react';
+import { Search, X, LayoutList, Kanban, Plus, SlidersHorizontal } from 'lucide-react';
 
 export default function FilterBar({
   search,
@@ -15,7 +15,11 @@ export default function FilterBar({
   milestones,
   onClear,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  onAddRowClick,
+  onAddColClick,
+  onManageColsClick,
+  columnsCount = 8
 }) {
   const hasActiveFilters = search || selectedMilestone || selectedRole || filterPreset;
 
@@ -121,7 +125,7 @@ export default function FilterBar({
         <div className="filter-right">
           {hasActiveFilters && (
             <button 
-              className="btn btn-secondary-outline"
+              className="btn btn-secondary-outline btn-sm"
               onClick={onClear}
             >
               <X size={14} />
@@ -129,14 +133,40 @@ export default function FilterBar({
             </button>
           )}
 
-          <button 
-            className="btn btn-secondary-outline" 
-            onClick={onRefresh}
-            title="Refresh tracker data"
-          >
-            <RefreshCw size={14} className={isRefreshing ? 'spin-icon' : ''} />
-            <span>Sync</span>
-          </button>
+          {/* Table View Actions: Combined into the same single line */}
+          {activeView === 'table' && (
+            <>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={onAddRowClick}
+                title="Add a new deliverable row"
+              >
+                <Plus size={14} />
+                <span>Row</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={onAddColClick}
+                title="Add a new custom column"
+              >
+                <Plus size={14} />
+                <span>Column</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={onManageColsClick}
+                title="Reorder and customize columns"
+              >
+                <SlidersHorizontal size={14} />
+                <span>Columns ({columnsCount})</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

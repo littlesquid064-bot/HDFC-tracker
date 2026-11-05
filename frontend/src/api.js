@@ -340,7 +340,27 @@ export const api = {
   },
 
   exportCsv(items) {
-    const headers = ['Ref', 'Milestone', 'Activity', 'Role', 'Owner', 'Start Date', 'End Date', 'Status', 'Actual Completion', 'Remarks', 'Last Updated'];
+    let customCols = [];
+    try {
+      const raw = localStorage.getItem('hdfc_table_custom_columns');
+      if (raw) customCols = JSON.parse(raw);
+    } catch (e) {}
+
+    const headers = [
+      'Ref', 
+      'Milestone', 
+      'Activity', 
+      'Role', 
+      'Owner', 
+      'Start Date', 
+      'End Date', 
+      'Status', 
+      'Actual Completion', 
+      'Remarks',
+      ...customCols.map(c => c.label),
+      'Last Updated'
+    ];
+
     const rows = items.map(i => [
       `"${(i.ref || '').replace(/"/g, '""')}"`,
       `"${(i.milestone || '').replace(/"/g, '""')}"`,
@@ -352,6 +372,7 @@ export const api = {
       `"${(i.status || '').replace(/"/g, '""')}"`,
       `"${(i.actual_completion || '').replace(/"/g, '""')}"`,
       `"${(i.remarks || '').replace(/"/g, '""')}"`,
+      ...customCols.map(c => `"${(i[c.id] || '').toString().replace(/"/g, '""')}"`),
       `"${(i.updatedAt || '').replace(/"/g, '""')}"`
     ]);
 

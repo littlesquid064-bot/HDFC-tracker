@@ -18,6 +18,16 @@ export default function ActivityDrawer({
   const [newComment, setNewComment] = useState('');
   const [activeTab, setActiveTab] = useState(initialTab); // 'update' | 'history'
   const [isSaving, setIsSaving] = useState(false);
+  const [customValues, setCustomValues] = useState({});
+
+  const customColumns = (() => {
+    try {
+      const raw = localStorage.getItem('hdfc_table_custom_columns');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  })();
 
   useEffect(() => {
     if (item) {
@@ -27,6 +37,12 @@ export default function ActivityDrawer({
       setOwner(item.partner_owner || '');
       setNewComment('');
       setActiveTab(initialTab);
+
+      const vals = {};
+      customColumns.forEach(c => {
+        vals[c.id] = item[c.id] || '';
+      });
+      setCustomValues(vals);
     }
   }, [item, initialTab, isOpen]);
 
@@ -48,7 +64,8 @@ export default function ActivityDrawer({
       status,
       remarks: finalRemarks,
       actual_completion: actualCompletion,
-      partner_owner: owner
+      partner_owner: owner,
+      ...customValues
     });
 
     setIsSaving(false);
@@ -184,6 +201,32 @@ export default function ActivityDrawer({
                   />
                 </div>
               </div>
+
+              {/* Custom Fields (if configured) */}
+              {customColumns.length > 0 && (
+                <div style={{ marginTop: '1rem', padding: '10px 12px', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Custom Columns
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                    {customColumns.map((col) => (
+                      <div key={col.id}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '3px' }}>
+                          {col.label}
+                        </label>
+                        <input
+                          type={col.type === 'date' ? 'date' : col.type === 'number' ? 'number' : 'text'}
+                          className="form-control"
+                          style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                          placeholder={`Enter ${col.label}...`}
+                          value={customValues[col.id] || ''}
+                          onChange={(e) => setCustomValues({ ...customValues, [col.id]: e.target.value })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Current Remarks */}
               <div className="form-group" style={{ marginTop: '1.25rem' }}>

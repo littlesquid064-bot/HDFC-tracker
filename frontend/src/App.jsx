@@ -44,6 +44,20 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
+  // Table Customization & Quick Add Row State
+  const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
+  const [isColumnManagerOpen, setIsColumnManagerOpen] = useState(false);
+  const [isInlineRowOpen, setIsInlineRowOpen] = useState(false);
+  const [columnsCount, setColumnsCount] = useState(() => {
+    try {
+      const raw = localStorage.getItem('hdfc_table_custom_columns');
+      const custom = raw ? JSON.parse(raw) : [];
+      return 8 + (Array.isArray(custom) ? custom.length : 0);
+    } catch (e) {
+      return 8;
+    }
+  });
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('hdfc_theme', theme);
@@ -412,6 +426,10 @@ export default function App() {
                   onClear={handleClearFilters}
                   onRefresh={handleRefresh}
                   isRefreshing={isRefreshing}
+                  onAddRowClick={() => setIsInlineRowOpen(prev => !prev)}
+                  onAddColClick={() => setIsAddColumnOpen(true)}
+                  onManageColsClick={() => setIsColumnManagerOpen(true)}
+                  columnsCount={columnsCount}
                 />
               )}
 
@@ -422,7 +440,17 @@ export default function App() {
                   onSaveRow={handleSaveRow}
                   onDeleteRow={handleDeleteActivity}
                   onOpenDrawer={handleOpenDrawer}
+                  onAddRow={handleAddActivity}
+                  onOpenAddModal={() => setIsAddModalOpen(true)}
+                  milestones={milestones}
                   isGrouped={!statusFilter && !search && !filterPreset}
+                  isInlineRowOpen={isInlineRowOpen}
+                  setIsInlineRowOpen={setIsInlineRowOpen}
+                  isAddColumnOpen={isAddColumnOpen}
+                  setIsAddColumnOpen={setIsAddColumnOpen}
+                  isColumnManagerOpen={isColumnManagerOpen}
+                  setIsColumnManagerOpen={setIsColumnManagerOpen}
+                  onColumnsChange={setColumnsCount}
                 />
               )}
 
