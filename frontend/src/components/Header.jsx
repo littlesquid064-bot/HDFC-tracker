@@ -6,6 +6,7 @@ const VIEW_TITLES = {
   table: { title: 'Deliverables Table', sub: 'Comprehensive tracker with inline updates' },
   kanban: { title: 'Kanban Board', sub: 'Stage-by-stage workflow pipeline' },
   feed: { title: 'Activity Logs', sub: 'Real-time audit trail of all project updates' },
+  sheet: { title: 'Excel Sheet', sub: 'Uploaded tracker — rename columns & rows' },
   matrix: { title: 'Readiness Matrix', sub: 'Milestone-by-milestone progress breakdown' }
 };
 

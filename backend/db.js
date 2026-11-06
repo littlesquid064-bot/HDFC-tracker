@@ -525,6 +525,25 @@ class DataStore {
     };
   }
 
+  // Replace the whole tracker with items imported from an uploaded Excel sheet
+  replaceAll(items) {
+    const now = new Date().toISOString();
+    this.items = items.map(i => ({ ...i, updatedAt: i.updatedAt || now }));
+    this.save();
+    this.recordActivity({
+      ref: '-',
+      milestone: '-',
+      activity: `Tracker data replaced from Excel import (${this.items.length} rows)`,
+      author: 'Team Member',
+      field: 'item',
+      oldValue: '',
+      newValue: 'Imported',
+      remarks: '',
+      action: 'created'
+    });
+    return this.items.length;
+  }
+
   resetToSeed() {
     if (fs.existsSync(SEED_FILE)) {
       this.items = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));

@@ -158,6 +158,18 @@ router.delete('/:ref', (req, res) => {
   }
 });
 
+// POST replace all items (Excel import / two-way sync from the Excel Sheet tab)
+router.post('/import', (req, res) => {
+  try {
+    const items = req.body.items;
+    if (!Array.isArray(items)) return res.status(400).json({ success: false, error: 'items array required' });
+    const count = db.replaceAll(items);
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // POST reset to original seed data
 router.post('/reset', (req, res) => {
   try {

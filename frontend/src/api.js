@@ -325,6 +325,21 @@ export const api = {
     return true;
   },
 
+  // Replace every item (used by the Excel Sheet tab to keep Dashboard / Table / Kanban in sync)
+  async importItems(items) {
+    saveLocalData(items);
+    try {
+      const res = await fetch(`${API_BASE}/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      });
+      return res.ok;
+    } catch (e) {
+      return true; // backend unreachable: data is saved locally
+    }
+  },
+
   async resetToSeed() {
     try {
       const res = await fetch(`${API_BASE}/reset`, { method: 'POST' });

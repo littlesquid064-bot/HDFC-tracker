@@ -10,7 +10,8 @@ import {
   Activity, 
   ChevronRight,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -61,6 +62,13 @@ export default function Sidebar({
       icon: BarChart3,
       badge: null,
       desc: 'Milestone progress matrix'
+    },
+    {
+      id: 'sheet',
+      label: 'Excel Sheet',
+      icon: FileSpreadsheet,
+      badge: null,
+      desc: 'Upload & edit your Excel tracker'
     }
   ];
 

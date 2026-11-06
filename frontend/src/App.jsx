@@ -7,6 +7,7 @@ import TrackerTable from './components/TrackerTable';
 import KanbanBoard from './components/KanbanBoard';
 import ActivityLogFeed from './components/ActivityLogFeed';
 import MilestoneMatrix from './components/MilestoneMatrix';
+import SheetView from './components/SheetView';
 import ActivityDrawer from './components/ActivityDrawer';
 import AddActivityModal from './components/AddActivityModal';
 import Toast from './components/Toast';
@@ -28,7 +29,7 @@ export default function App() {
   // Active View: 'dashboard' | 'table' | 'kanban' | 'feed' | 'matrix' (persisted across refreshes).
   const [activeView, setActiveView] = useState(() => {
     const hash = window.location.hash.replace(/^#/, '');
-    if (['dashboard', 'table', 'kanban', 'feed', 'matrix'].includes(hash)) {
+    if (['dashboard', 'table', 'kanban', 'feed', 'matrix', 'sheet'].includes(hash)) {
       return hash;
     }
     return localStorage.getItem('hdfc_active_view') || 'dashboard';
@@ -81,7 +82,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace(/^#/, '');
-      if (['dashboard', 'table', 'kanban', 'feed', 'matrix'].includes(hash)) {
+      if (['dashboard', 'table', 'kanban', 'feed', 'matrix', 'sheet'].includes(hash)) {
         setActiveView(hash);
       }
     };
@@ -520,6 +521,22 @@ export default function App() {
                 <MilestoneMatrix
                   items={items}
                   onSelectMilestone={handleSelectMilestoneFromMatrix}
+                />
+              )}
+
+              {/* Tab 6: Uploaded Excel Sheet */}
+              {activeView === 'sheet' && (
+                <SheetView
+                  onToast={addToast}
+                  items={items}
+                  onSyncItems={async (newItems) => {
+                    const ok = await api.importItems(newItems);
+                    if (!ok) {
+                      addToast('Server rejected the sync — restart the backend (npm start) and try again', 'error');
+                      return;
+                    }
+                    await fetchData(false, true);
+                  }}
                 />
               )}
             </>
