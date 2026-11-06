@@ -14,7 +14,7 @@ import { api } from './api';
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('hdfc_theme') || 
+    return localStorage.getItem('hdfc_theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   });
 
@@ -25,7 +25,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Active View: 'dashboard' | 'table' | 'kanban' | 'feed' | 'matrix' (persisted across refreshes)
+  // Active View: 'dashboard' | 'table' | 'kanban' | 'feed' | 'matrix' (persisted across refreshes).
   const [activeView, setActiveView] = useState(() => {
     const hash = window.location.hash.replace(/^#/, '');
     if (['dashboard', 'table', 'kanban', 'feed', 'matrix'].includes(hash)) {
@@ -193,7 +193,7 @@ export default function App() {
       }));
 
       const updated = await api.updateItem(ref, updates);
-      
+
       // Update selected drawer item if currently open
       if (selectedItem && selectedItem.ref === ref) {
         setSelectedItem(updated);
@@ -205,13 +205,13 @@ export default function App() {
       const freshAllLogs = await api.getActivityLogs(100);
       setActivityLogs(freshAllLogs);
 
-      const changeSummary = updates.status 
+      const changeSummary = updates.status
         ? `Status: ${updates.status}`
-        : updates.remarks 
-        ? 'Remarks updated' 
-        : updates.partner_owner 
-        ? `Owner: ${updates.partner_owner}`
-        : 'Saved';
+        : updates.remarks
+          ? 'Remarks updated'
+          : updates.partner_owner
+            ? `Owner: ${updates.partner_owner}`
+            : 'Saved';
       addToast(`Logged & Saved [${ref}]: ${changeSummary}`);
     } catch (err) {
       console.error('Failed to save activity:', err);
@@ -314,8 +314,8 @@ export default function App() {
     return c;
   }, [items]);
 
-  const completionPct = items.length > 0 
-    ? Math.round(((counts['Completed'] || 0) / items.length) * 100) 
+  const completionPct = items.length > 0
+    ? Math.round(((counts['Completed'] || 0) / items.length) * 100)
     : 0;
 
   // Filtered Activities
@@ -382,7 +382,7 @@ export default function App() {
       localStorage.removeItem('hdfc_filter_role');
       localStorage.removeItem('hdfc_filter_status');
       localStorage.removeItem('hdfc_filter_preset');
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleSelectRefFromFeed = (ref) => {
