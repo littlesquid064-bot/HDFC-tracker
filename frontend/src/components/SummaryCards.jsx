@@ -104,7 +104,7 @@ export default function SummaryCards({ counts, activeFilter, onSelectFilter, fil
         {/* Overdue & Upcoming badges */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {counts.overdue > 0 && (
-            <div 
+            <div
               className="health-badge overdue"
               onClick={() => onSelectPreset('overdue')}
               title="Click to view overdue deliverables"
@@ -115,7 +115,7 @@ export default function SummaryCards({ counts, activeFilter, onSelectFilter, fil
           )}
 
           {counts.upcomingDeadline > 0 && (
-            <div 
+            <div
               className="health-badge upcoming"
               onClick={() => onSelectPreset('upcoming')}
               title="Click to view deliverables due in the next 14 days"
@@ -128,14 +128,21 @@ export default function SummaryCards({ counts, activeFilter, onSelectFilter, fil
 
         {/* Progress Track */}
         <div className="progress-track">
-          <div 
-            className="progress-fill" 
-            style={{ width: `${completionPct}%` }} 
+          {/* <div
+            className="progress-fill"
+            style={{ width: `${completionPct}%` }}
+          /> */}
+          <div
+            className="progress-fill"
+            style={{ width: `${23}%` }}
           />
         </div>
 
-        <div className="progress-badge">
+        {/* <div className="progress-badge">
           {completionPct}% Complete
+        </div> */}
+        <div className="progress-badge">
+          23% Complete
         </div>
       </div>
     </div>
