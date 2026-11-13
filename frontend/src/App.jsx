@@ -10,6 +10,7 @@ import MilestoneMatrix from './components/MilestoneMatrix';
 import SheetView from './components/SheetView';
 import ActivityDrawer from './components/ActivityDrawer';
 import AddActivityModal from './components/AddActivityModal';
+import ExcelUploadModal from './components/ExcelUploadModal';
 import Toast from './components/Toast';
 import { api } from './api';
 
@@ -49,6 +50,8 @@ export default function App() {
   const [drawerInitialTab, setDrawerInitialTab] = useState('update');
   const [itemHistory, setItemHistory] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExcelUploadOpen, setIsExcelUploadOpen] = useState(false);
+  const [pendingUploadFile, setPendingUploadFile] = useState(null);
   const [toasts, setToasts] = useState([]);
 
   // Table Customization & Quick Add Row State
@@ -274,6 +277,41 @@ export default function App() {
     addToast(`Exported ${filteredItems.length > 0 ? filteredItems.length : items.length} activities to CSV`);
   };
 
+  // Selective Excel Upload updates handler
+  const handleApplyExcelUpdates = async (updatedItems, meta) => {
+    try {
+      setItems(updatedItems);
+      await api.importItems(updatedItems);
+
+      // Persist any renamed column labels
+      if (meta?.columnRenames && Object.keys(meta.columnRenames).length > 0) {
+        try {
+          const raw = localStorage.getItem('hdfc_table_column_labels');
+          const existing = raw ? JSON.parse(raw) : {};
+          const merged = { ...existing, ...meta.columnRenames };
+          localStorage.setItem('hdfc_table_column_labels', JSON.stringify(merged));
+          const config = await api.getTableConfig();
+          await api.saveTableConfig({ 
+            customColumns: config?.customColumns || [], 
+            columnOrder: config?.columnOrder || [],
+            columnLabels: merged
+          });
+        } catch (e) {
+          console.warn('Could not save column renames:', e);
+        }
+      }
+
+      await fetchData(false, true);
+      addToast(
+        `Updated ${meta.updatedColumns.join(', ')} across deliverables — untouched columns preserved!`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Failed to apply Excel updates:', err);
+      addToast('Error applying Excel updates', 'error');
+    }
+  };
+
   // Unique milestones
   const milestones = useMemo(() => {
     const set = new Set();
@@ -361,9 +399,11 @@ export default function App() {
         const matchesRef = item.ref && item.ref.toLowerCase().includes(q);
         const matchesActivity = item.activity && item.activity.toLowerCase().includes(q);
         const matchesOwner = item.partner_owner && item.partner_owner.toLowerCase().includes(q);
+        const matchesActual = item.actual && item.actual.toLowerCase().includes(q);
+        const matchesHdfc = item.hdfc_owner && item.hdfc_owner.toLowerCase().includes(q);
         const matchesRemarks = item.remarks && item.remarks.toLowerCase().includes(q);
         const matchesMilestone = item.milestone && item.milestone.toLowerCase().includes(q);
-        if (!matchesRef && !matchesActivity && !matchesOwner && !matchesRemarks && !matchesMilestone) {
+        if (!matchesRef && !matchesActivity && !matchesOwner && !matchesActual && !matchesHdfc && !matchesRemarks && !matchesMilestone) {
           return false;
         }
       }
@@ -421,6 +461,10 @@ export default function App() {
           theme={theme}
           toggleTheme={toggleTheme}
           onAddClick={() => setIsAddModalOpen(true)}
+          onUploadClick={() => {
+            setPendingUploadFile(null);
+            setIsExcelUploadOpen(true);
+          }}
           onExportClick={handleExport}
           onResetClick={handleReset}
           activeView={activeView}
@@ -529,6 +573,10 @@ export default function App() {
                 <SheetView
                   onToast={addToast}
                   items={items}
+                  onOpenUploadModal={(file) => {
+                    setPendingUploadFile(file);
+                    setIsExcelUploadOpen(true);
+                  }}
                   onSyncItems={async (newItems) => {
                     const ok = await api.importItems(newItems);
                     if (!ok) {
@@ -560,6 +608,19 @@ export default function App() {
         onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddActivity}
         milestones={milestones}
+      />
+
+      {/* Excel Selective Upload Modal */}
+      <ExcelUploadModal
+        isOpen={isExcelUploadOpen}
+        onClose={() => {
+          setIsExcelUploadOpen(false);
+          setPendingUploadFile(null);
+        }}
+        initialFile={pendingUploadFile}
+        items={items}
+        onApplyUpdates={handleApplyExcelUpdates}
+        onToast={addToast}
       />
 
       <Toast toasts={toasts} onDismiss={dismissToast} />

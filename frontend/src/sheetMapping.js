@@ -8,15 +8,49 @@ const HEADER_FIELDS = {
   'ref': 'ref',
   'milestone': 'milestone',
   'activity / deliverable': 'activity',
+  'activity': 'activity',
+  'deliverable': 'activity',
+  'deliverable / sla (where specified)': 'sla',
   'niit role': 'niit_role',
+  'role': 'niit_role',
   'partner owner (name)': 'partner_owner',
+  'partner owner': 'partner_owner',
+  'owner': 'partner_owner',
   'actual': 'actual',
+  'actuals': 'actual',
+  'sub-owner': 'actual',
+  'sub owner': 'actual',
+  'subowner': 'actual',
   'hdfc owner': 'hdfc_owner',
+  'hdfc_owner': 'hdfc_owner',
+  'hdfc': 'hdfc_owner',
   'committed start date': 'start',
+  'start date': 'start',
+  'start': 'start',
   'committed completion date': 'end',
+  'completion date': 'end',
+  'end date': 'end',
+  'end': 'end',
   'status': 'status',
   'actual completion date': 'actual_completion',
-  'remarks / dependency / blocker': 'remarks'
+  'actual completion': 'actual_completion',
+  'remarks / dependency / blocker': 'remarks',
+  'remarks': 'remarks'
+};
+
+export const FIELD_LABELS = {
+  ref: 'REF',
+  milestone: 'MILESTONE',
+  activity: 'ACTIVITY / DELIVERABLE',
+  niit_role: 'ROLE',
+  partner_owner: 'OWNER',
+  actual: 'SUB-OWNER',
+  hdfc_owner: 'HDFC OWNER',
+  start: 'START DATE',
+  end: 'END DATE',
+  status: 'STATUS',
+  actual_completion: 'ACTUAL COMPLETION',
+  remarks: 'REMARKS / BLOCKERS'
 };
 
 export const fieldForHeader = (label) => HEADER_FIELDS[String(label).trim().toLowerCase()] || null;
@@ -68,6 +102,8 @@ export function sheetToItems(sheet) {
     item.milestone = item.milestone || 'General';
     item.activity = item.activity || '';
     item.partner_owner = item.partner_owner || '';
+    item.actual = item.actual || '';
+    item.hdfc_owner = item.hdfc_owner || '';
     item.remarks = item.remarks || '';
     item.actual_completion = item.actual_completion || '';
     let ref = item.ref || `ROW.${n + 1}`;

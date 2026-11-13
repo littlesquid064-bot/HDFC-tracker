@@ -13,6 +13,8 @@ export default function AddActivityModal({
   const [activity, setActivity] = useState('');
   const [role, setRole] = useState('Lead');
   const [owner, setOwner] = useState('');
+  const [actual, setActual] = useState('');
+  const [hdfcOwner, setHdfcOwner] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState('Not Started');
@@ -35,6 +37,8 @@ export default function AddActivityModal({
       activity: activity.trim(),
       niit_role: role,
       partner_owner: owner.trim() || 'TBD',
+      actual: actual.trim() || '',
+      hdfc_owner: hdfcOwner.trim() || '',
       start: startDate,
       end: endDate,
       status,
@@ -126,7 +130,7 @@ export default function AddActivityModal({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label className="form-label">Owner / SPOC</label>
+                <label className="form-label">Partner Owner</label>
                 <input
                   type="text"
                   className="form-control"
@@ -149,6 +153,30 @@ export default function AddActivityModal({
                   <option value="Completed">Completed</option>
                   <option value="On Hold">On Hold</option>
                 </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Sub-Owner (Actual)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Rashmi / Avinash"
+                  value={actual}
+                  onChange={(e) => setActual(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">HDFC Owner</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Myra / Sabnam / Nikita"
+                  value={hdfcOwner}
+                  onChange={(e) => setHdfcOwner(e.target.value)}
+                />
               </div>
             </div>
 

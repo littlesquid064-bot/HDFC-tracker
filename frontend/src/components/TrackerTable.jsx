@@ -31,6 +31,8 @@ const DEFAULT_COLUMNS = [
   { id: 'role', label: 'ROLE', width: '105px', canMove: true, isDefault: true },
   { id: 'activity', label: 'ACTIVITY / DELIVERABLE', minWidth: '260px', canMove: true, isDefault: true },
   { id: 'owner', label: 'OWNER', width: '135px', canMove: true, isDefault: true },
+  { id: 'actual', label: 'SUB-OWNER', width: '135px', canMove: true, isDefault: true },
+  { id: 'hdfc_owner', label: 'HDFC OWNER', width: '135px', canMove: true, isDefault: true },
   { id: 'timeline', label: 'TIMELINE', width: '145px', canMove: true, isDefault: true },
   { id: 'status', label: 'STATUS', width: '150px', canMove: true, isDefault: true },
   { id: 'remarks', label: 'REMARKS / BLOCKERS', minWidth: '220px', canMove: true, isDefault: true },
@@ -39,7 +41,8 @@ const DEFAULT_COLUMNS = [
 
 const STORAGE_KEYS = {
   COLUMNS_ORDER: 'hdfc_table_columns_order',
-  CUSTOM_COLUMNS: 'hdfc_table_custom_columns'
+  CUSTOM_COLUMNS: 'hdfc_table_custom_columns',
+  COLUMN_LABELS: 'hdfc_table_column_labels'
 };
 
 const COMMON_TAGS = ['High', 'Medium', 'Low', 'Critical', 'Urgent', 'On Track', 'Review Needed'];
@@ -87,6 +90,31 @@ export default function TrackerTable({
     return DEFAULT_COLUMNS.map(c => c.id);
   });
 
+  // Custom column labels (for renaming standard or custom columns)
+  const [columnLabels, setColumnLabels] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.COLUMN_LABELS);
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const [renamingColId, setRenamingColId] = useState(null);
+  const [renameColDraft, setRenameColDraft] = useState('');
+
+  const handleRenameColumn = (colId, newLabel) => {
+    const trimmed = (newLabel || '').trim();
+    if (!trimmed) return;
+    const updated = { ...columnLabels, [colId]: trimmed };
+    setColumnLabels(updated);
+    try {
+      localStorage.setItem(STORAGE_KEYS.COLUMN_LABELS, JSON.stringify(updated));
+    } catch (e) {}
+    api.saveTableConfig({ customColumns, columnOrder, columnLabels: updated });
+    setRenamingColId(null);
+  };
+
   // Modals state (controlled from props or fallback to local)
   const [localIsAddColumnOpen, setLocalIsAddColumnOpen] = useState(false);
   const [localIsColumnManagerOpen, setLocalIsColumnManagerOpen] = useState(false);
@@ -107,6 +135,8 @@ export default function TrackerTable({
   const [inlineActivity, setInlineActivity] = useState('');
   const [inlineRole, setInlineRole] = useState('Lead');
   const [inlineOwner, setInlineOwner] = useState('');
+  const [inlineActual, setInlineActual] = useState('');
+  const [inlineHdfcOwner, setInlineHdfcOwner] = useState('');
   const [inlineStart, setInlineStart] = useState(() => new Date().toISOString().split('T')[0]);
   const [inlineEnd, setInlineEnd] = useState(() => {
     const d = new Date();
@@ -127,19 +157,31 @@ export default function TrackerTable({
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Combined columns map and active column list
+  // Combined columns map and active column list with custom labels applied
   const allColumnsMap = useMemo(() => {
     const map = {};
-    DEFAULT_COLUMNS.forEach(col => { map[col.id] = col; });
-    customColumns.forEach(col => { map[col.id] = col; });
+    DEFAULT_COLUMNS.forEach(col => { 
+      map[col.id] = { ...col, label: columnLabels[col.id] || col.label }; 
+    });
+    customColumns.forEach(col => { 
+      map[col.id] = { ...col, label: columnLabels[col.id] || col.label }; 
+    });
     return map;
-  }, [customColumns]);
+  }, [customColumns, columnLabels]);
 
   // Filtered active columns in display order
   const activeColumns = useMemo(() => {
     const list = [];
     columnOrder.forEach(id => {
       if (allColumnsMap[id]) list.push(allColumnsMap[id]);
+    });
+    // Ensure any default columns not in saved order (e.g. newly added actual, hdfc_owner) are inserted
+    DEFAULT_COLUMNS.forEach(col => {
+      if (!list.some(c => c.id === col.id)) {
+        const insertBeforeIdx = list.findIndex(c => c.id === 'timeline' || c.id === 'actions');
+        if (insertBeforeIdx !== -1) list.splice(insertBeforeIdx, 0, allColumnsMap[col.id] || col);
+        else list.push(allColumnsMap[col.id] || col);
+      }
     });
     // Ensure any custom columns not in order are appended before actions
     customColumns.forEach(col => {
@@ -305,7 +347,11 @@ export default function TrackerTable({
     const defaultOrder = DEFAULT_COLUMNS.map(c => c.id);
     setCustomColumns([]);
     setColumnOrder(defaultOrder);
-    api.saveTableConfig({ customColumns: [], columnOrder: defaultOrder });
+    setColumnLabels({});
+    try {
+      localStorage.removeItem(STORAGE_KEYS.COLUMN_LABELS);
+    } catch (e) {}
+    api.saveTableConfig({ customColumns: [], columnOrder: defaultOrder, columnLabels: {} });
     setIsColumnManagerOpen(false);
   };
 
@@ -391,6 +437,8 @@ export default function TrackerTable({
       activity: inlineActivity.trim(),
       niit_role: inlineRole,
       partner_owner: inlineOwner.trim() || 'TBD',
+      actual: inlineActual.trim() || '',
+      hdfc_owner: inlineHdfcOwner.trim() || '',
       start: inlineStart,
       end: inlineEnd,
       status: inlineStatus,
@@ -453,11 +501,177 @@ export default function TrackerTable({
         );
 
       case 'owner':
+        if (editingCustomCell?.ref === item.ref && editingCustomCell?.colId === 'partner_owner') {
+          return (
+            <td key={col.id} onClick={(e) => e.stopPropagation()} style={{ width: col.width || '135px' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '0.8rem', padding: '3px 6px', height: '28px' }}
+                  value={editingCustomCell.value}
+                  autoFocus
+                  onChange={(e) => setEditingCustomCell({ ...editingCustomCell, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCustomCell(item.ref, 'partner_owner', editingCustomCell.value);
+                    if (e.key === 'Escape') setEditingCustomCell(null);
+                  }}
+                />
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '3px 6px', height: '28px' }}
+                  onClick={() => handleSaveCustomCell(item.ref, 'partner_owner', editingCustomCell.value)}
+                  title="Save"
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  className="btn"
+                  style={{ padding: '3px 6px', height: '28px', background: 'var(--bg-subtle)' }}
+                  onClick={() => setEditingCustomCell(null)}
+                  title="Cancel"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </td>
+          );
+        }
         return (
           <td key={col.id} onClick={(e) => e.stopPropagation()} style={{ width: col.width || '135px' }}>
-            <div className="table-owner-cell">
+            <div 
+              className="table-owner-cell"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setEditingCustomCell({ ref: item.ref, colId: 'partner_owner', value: item.partner_owner || '' })}
+              title="Click to edit Partner Owner"
+            >
               <User size={13} color="var(--text-subtle)" />
               <span>{item.partner_owner || 'Unassigned'}</span>
+            </div>
+          </td>
+        );
+
+      case 'actual':
+        if (editingCustomCell?.ref === item.ref && editingCustomCell?.colId === 'actual') {
+          return (
+            <td key={col.id} onClick={(e) => e.stopPropagation()} style={{ width: col.width || '135px' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '0.8rem', padding: '3px 6px', height: '28px' }}
+                  value={editingCustomCell.value}
+                  autoFocus
+                  onChange={(e) => setEditingCustomCell({ ...editingCustomCell, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCustomCell(item.ref, 'actual', editingCustomCell.value);
+                    if (e.key === 'Escape') setEditingCustomCell(null);
+                  }}
+                />
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '3px 6px', height: '28px' }}
+                  onClick={() => handleSaveCustomCell(item.ref, 'actual', editingCustomCell.value)}
+                  title="Save"
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  className="btn"
+                  style={{ padding: '3px 6px', height: '28px', background: 'var(--bg-subtle)' }}
+                  onClick={() => setEditingCustomCell(null)}
+                  title="Cancel"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </td>
+          );
+        }
+        return (
+          <td key={col.id} onClick={(e) => e.stopPropagation()} style={{ width: col.width || '135px' }}>
+            <div 
+              className="table-owner-cell"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setEditingCustomCell({ ref: item.ref, colId: 'actual', value: item.actual || '' })}
+              title="Click to edit Sub-Owner / Actual"
+            >
+              <User size={13} color="var(--primary)" />
+              <span style={{ 
+                fontWeight: item.actual ? 600 : 400, 
+                color: item.actual ? 'var(--text-main)' : 'var(--text-subtle)',
+                fontStyle: item.actual ? 'normal' : 'italic' 
+              }}>
+                {item.actual || '+ Sub-owner'}
+              </span>
+            </div>
+          </td>
+        );
+
+      case 'hdfc_owner':
+        if (editingCustomCell?.ref === item.ref && editingCustomCell?.colId === 'hdfc_owner') {
+          return (
+            <td key={col.id} onClick={(e) => e.stopPropagation()} style={{ width: col.width || '135px' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '0.8rem', padding: '3px 6px', height: '28px' }}
+                  value={editingCustomCell.value}
+                  autoFocus
+                  onChange={(e) => setEditingCustomCell({ ...editingCustomCell, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCustomCell(item.ref, 'hdfc_owner', editingCustomCell.value);
+                    if (e.key === 'Escape') setEditingCustomCell(null);
+                  }}
+                />
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '3px 6px', height: '28px' }}
+                  onClick={() => handleSaveCustomCell(item.ref, 'hdfc_owner', editingCustomCell.value)}
+                  title="Save"
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  className="btn"
+                  style={{ padding: '3px 6px', height: '28px', background: 'var(--bg-subtle)' }}
+                  onClick={() => setEditingCustomCell(null)}
+                  title="Cancel"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </td>
+          );
+        }
+        return (
+          <td key={col.id} onClick={(e) => e.stopPropagation()} style={{ width: col.width || '135px' }}>
+            <div 
+              className="table-owner-cell"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setEditingCustomCell({ ref: item.ref, colId: 'hdfc_owner', value: item.hdfc_owner || '' })}
+              title="Click to edit HDFC Owner"
+            >
+              {item.hdfc_owner ? (
+                <span style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '4px', 
+                  padding: '2px 8px', 
+                  borderRadius: '4px', 
+                  fontSize: '0.78rem', 
+                  background: 'rgba(237, 28, 36, 0.08)', 
+                  color: 'var(--hdfc-red, #ed1c24)', 
+                  fontWeight: 600 
+                }}>
+                  {item.hdfc_owner}
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontStyle: 'italic' }}>
+                  + HDFC Owner
+                </span>
+              )}
             </div>
           </td>
         );
@@ -763,9 +977,49 @@ export default function TrackerTable({
                     }}
                   >
                     <div className="th-content-wrap">
-                      <span className="th-title" title={`Column: ${col.label}`}>
-                        {col.label}
-                      </span>
+                      {renamingColId === col.id ? (
+                        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            style={{ fontSize: '0.75rem', padding: '2px 5px', height: '24px', fontWeight: 700 }}
+                            value={renameColDraft}
+                            autoFocus
+                            onChange={(e) => setRenameColDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRenameColumn(col.id, renameColDraft);
+                              if (e.key === 'Escape') setRenamingColId(null);
+                            }}
+                            onBlur={() => handleRenameColumn(col.id, renameColDraft)}
+                          />
+                          <button 
+                            className="btn btn-primary" 
+                            style={{ padding: '2px 5px', height: '24px' }}
+                            onClick={() => handleRenameColumn(col.id, renameColDraft)}
+                            title="Save label"
+                          >
+                            <Check size={11} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span 
+                          className="th-title" 
+                          title={!isActions ? `Click to rename column "${col.label}"` : `Column: ${col.label}`}
+                          onClick={(e) => {
+                            if (!isActions) {
+                              e.stopPropagation();
+                              setRenamingColId(col.id);
+                              setRenameColDraft(col.label);
+                            }
+                          }}
+                          style={{ cursor: !isActions ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          {col.label}
+                          {!isActions && (
+                            <Edit3 size={10} style={{ opacity: 0.4 }} className="th-rename-icon" />
+                          )}
+                        </span>
+                      )}
 
                       {/* Header Move & Action Controls */}
                       {!isActions && (
@@ -1033,6 +1287,7 @@ export default function TrackerTable({
         onClose={() => setIsColumnManagerOpen(false)}
         columns={activeColumns}
         onMoveColumn={handleMoveColumn}
+        onRenameColumn={handleRenameColumn}
         onDeleteCustomColumn={handleDeleteCustomColumn}
         onResetColumns={handleResetColumns}
         onOpenAddColumn={() => setIsAddColumnOpen(true)}

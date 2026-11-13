@@ -1,16 +1,32 @@
-import React from 'react';
-import { X, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Trash2, RotateCcw, Plus, GripVertical, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Trash2, RotateCcw, Plus, GripVertical, Check, Edit2 } from 'lucide-react';
 
 export default function ColumnManagerModal({
   isOpen,
   onClose,
   columns,
   onMoveColumn,
+  onRenameColumn,
   onDeleteCustomColumn,
   onResetColumns,
   onOpenAddColumn
 }) {
+  const [editingColId, setEditingColId] = useState(null);
+  const [editDraft, setEditDraft] = useState('');
+
   if (!isOpen) return null;
+
+  const handleStartRename = (col) => {
+    setEditingColId(col.id);
+    setEditDraft(col.label);
+  };
+
+  const handleSaveRename = (colId) => {
+    if (editDraft.trim() && onRenameColumn) {
+      onRenameColumn(colId, editDraft.trim());
+    }
+    setEditingColId(null);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -85,19 +101,65 @@ export default function ColumnManagerModal({
                       {index + 1}.
                     </span>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{col.label}</span>
-                        {!col.isDefault && (
-                          <span className="badge-custom-tag" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
-                            Custom ({col.type || 'text'})
-                          </span>
-                        )}
-                        {isActions && (
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-subtle)', background: 'var(--bg-subtle)', padding: '1px 6px', borderRadius: '4px' }}>
-                            Fixed right
-                          </span>
-                        )}
-                      </div>
+                      {editingColId === col.id ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            style={{ fontSize: '0.8rem', padding: '2px 6px', height: '26px', fontWeight: 600, width: '150px' }}
+                            value={editDraft}
+                            autoFocus
+                            onChange={(e) => setEditDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveRename(col.id);
+                              if (e.key === 'Escape') setEditingColId(null);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ padding: '2px 6px', height: '26px' }}
+                            onClick={() => handleSaveRename(col.id)}
+                            title="Save label"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn"
+                            style={{ padding: '2px 6px', height: '26px', background: 'var(--bg-subtle)' }}
+                            onClick={() => setEditingColId(null)}
+                            title="Cancel"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{col.label}</span>
+                          {!isActions && (
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              style={{ padding: '2px', opacity: 0.6 }}
+                              onClick={() => handleStartRename(col)}
+                              title={`Rename column "${col.label}"`}
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          )}
+                          {!col.isDefault && (
+                            <span className="badge-custom-tag" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                              Custom ({col.type || 'text'})
+                            </span>
+                          )}
+                          {isActions && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-subtle)', background: 'var(--bg-subtle)', padding: '1px 6px', borderRadius: '4px' }}>
+                              Fixed right
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 

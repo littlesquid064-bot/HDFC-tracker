@@ -81,13 +81,15 @@ router.get('/tables', async (req, res) => {
 router.get('/export/csv', (req, res) => {
   try {
     const items = db.getAll();
-    const headers = ['Ref', 'Milestone', 'Activity', 'Role', 'Owner', 'Start Date', 'End Date', 'Status', 'Actual Completion', 'Remarks', 'Last Updated'];
+    const headers = ['Ref', 'Milestone', 'Activity', 'Role', 'Owner', 'Sub-Owner', 'HDFC Owner', 'Start Date', 'End Date', 'Status', 'Actual Completion', 'Remarks', 'Last Updated'];
     const rows = items.map(i => [
       `"${(i.ref || '').replace(/"/g, '""')}"`,
       `"${(i.milestone || '').replace(/"/g, '""')}"`,
       `"${(i.activity || '').replace(/"/g, '""')}"`,
       `"${(i.niit_role || '').replace(/"/g, '""')}"`,
       `"${(i.partner_owner || '').replace(/"/g, '""')}"`,
+      `"${(i.actual || '').replace(/"/g, '""')}"`,
+      `"${(i.hdfc_owner || '').replace(/"/g, '""')}"`,
       `"${(i.start || '').replace(/"/g, '""')}"`,
       `"${(i.end || '').replace(/"/g, '""')}"`,
       `"${(i.status || '').replace(/"/g, '""')}"`,

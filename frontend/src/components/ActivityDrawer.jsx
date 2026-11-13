@@ -15,6 +15,8 @@ export default function ActivityDrawer({
   const [remarks, setRemarks] = useState('');
   const [actualCompletion, setActualCompletion] = useState('');
   const [owner, setOwner] = useState('');
+  const [actual, setActual] = useState('');
+  const [hdfcOwner, setHdfcOwner] = useState('');
   const [newComment, setNewComment] = useState('');
   const [activeTab, setActiveTab] = useState(initialTab); // 'update' | 'history'
   const [isSaving, setIsSaving] = useState(false);
@@ -35,6 +37,8 @@ export default function ActivityDrawer({
       setRemarks(item.remarks || '');
       setActualCompletion(item.actual_completion || '');
       setOwner(item.partner_owner || '');
+      setActual(item.actual || '');
+      setHdfcOwner(item.hdfc_owner || '');
       setNewComment('');
       setActiveTab(initialTab);
 
@@ -65,6 +69,8 @@ export default function ActivityDrawer({
       remarks: finalRemarks,
       actual_completion: actualCompletion,
       partner_owner: owner,
+      actual,
+      hdfc_owner: hdfcOwner,
       ...customValues
     });
 
@@ -156,7 +162,7 @@ export default function ActivityDrawer({
                 <div>
                   <label className="form-label">
                     <User size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                    Owner / SPOC
+                    Partner Owner
                   </label>
                   <input
                     type="text"
@@ -174,6 +180,36 @@ export default function ActivityDrawer({
                   <div style={{ fontSize: '0.85rem', padding: '0.55rem', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)' }}>
                     {item.start} &rarr; {item.end}
                   </div>
+                </div>
+              </div>
+
+              {/* Sub-Owner (Actual) and HDFC Owner Grid */}
+              <div className="drawer-meta-grid" style={{ marginTop: '0.85rem' }}>
+                <div>
+                  <label className="form-label">
+                    <User size={13} style={{ display: 'inline', marginRight: '4px' }} />
+                    Sub-Owner (Actual)
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={actual}
+                    onChange={(e) => setActual(e.target.value)}
+                    placeholder="e.g. Rashmi / Avinash"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">
+                    <Tag size={13} style={{ display: 'inline', marginRight: '4px' }} />
+                    HDFC Owner
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={hdfcOwner}
+                    onChange={(e) => setHdfcOwner(e.target.value)}
+                    placeholder="e.g. Myra / Sabnam / Nikita"
+                  />
                 </div>
               </div>
 

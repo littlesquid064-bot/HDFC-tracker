@@ -1,21 +1,11 @@
 {
   "name": "Deliverables Table",
-  "customColumns": [
-    {
-      "id": "custom_1793959975641",
-      "label": "SUB OWNER",
-      "type": "text",
-      "minWidth": "150px",
-      "canMove": true,
-      "isDefault": false
-    }
-  ],
+  "customColumns": [],
   "columnOrder": [
     "ref",
     "role",
     "activity",
     "owner",
-    "custom_1793959975641",
     "timeline",
     "status",
     "remarks",

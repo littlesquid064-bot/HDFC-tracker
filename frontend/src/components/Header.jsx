@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Plus, Sun, Moon, Menu } from 'lucide-react';
+import { Download, Plus, Sun, Moon, Menu, Upload } from 'lucide-react';
 
 const VIEW_TITLES = {
   dashboard: { title: 'Dashboard', sub: 'Executive overview, launch readiness & KPIs' },
@@ -15,6 +15,7 @@ export default function Header({
   theme,
   toggleTheme,
   onAddClick,
+  onUploadClick,
   onExportClick,
   onResetClick,
   activeView = 'dashboard',
@@ -50,6 +51,16 @@ export default function Header({
           aria-label="Toggle theme"
         >
           {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+
+        {/* Upload Excel Button */}
+        <button 
+          className="btn btn-secondary" 
+          onClick={onUploadClick}
+          title="Upload Excel and selectively update columns mapped by milestone"
+        >
+          <Upload size={14} />
+          <span className="btn-label-desktop">Upload Excel</span>
         </button>
 
         {/* Export to CSV */}

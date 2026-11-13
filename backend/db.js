@@ -24,45 +24,59 @@ class DataStore {
       console.warn('MONGODB_URI not set: using local JSON files (data is lost on ephemeral hosts).');
       return this.initFromFiles();
     }
-    const { MongoClient } = require('mongodb');
-    const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
-    await client.connect();
-    mongoDb = client.db(); // database name comes from the URI (hdfc-tracker)
-
-    const items = await mongoDb.collection('items').find({}).sort({ order: 1 }).toArray();
-    if (items.length > 0) {
-      this.items = items.map(({ _id, order, ...rest }) => rest);
-      const logs = await mongoDb.collection('activity_logs').find({}).sort({ order: 1 }).toArray();
-      this.activityLogs = logs.map(({ _id, order, ...rest }) => rest);
-    } else {
-      // First run: migrate existing local data (store.json / activity_log.json), else seed.json
-      this.initFromFiles();
-      this.useDb = true;
-      await this.save();
-      await this.saveLogs();
-      console.log(`Migrated ${this.items.length} items and ${this.activityLogs.length} log entries to MongoDB`);
-    }
-    console.log(`Loaded ${this.items.length} items from MongoDB`);
-
-    // Load table configuration / custom columns from MongoDB "tables" collection
     try {
-      const tableDoc = await mongoDb.collection('tables').findOne({ _id: 'deliverables' });
-      if (tableDoc) {
-        this.tableConfig = {
-          name: tableDoc.name || 'Deliverables Table',
-          customColumns: tableDoc.customColumns || [],
-          columnOrder: tableDoc.columnOrder || []
-        };
-        console.log(`Loaded table configuration from MongoDB (${this.tableConfig.customColumns.length} custom columns)`);
+      const { MongoClient } = require('mongodb');
+      const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
+      await client.connect();
+      mongoDb = client.db(); // database name comes from the URI (hdfc-tracker)
+
+      const items = await mongoDb.collection('items').find({}).sort({ order: 1 }).toArray();
+      if (items.length > 0) {
+        this.items = items.map(({ _id, order, ...rest }) => rest);
+        const logs = await mongoDb.collection('activity_logs').find({}).sort({ order: 1 }).toArray();
+        this.activityLogs = logs.map(({ _id, order, ...rest }) => rest);
+
+        // If existing MongoDB items are from the older 58-item seed or lack sub-owner/HDFC owner:
+        const hasOwners = this.items.some(i => i.actual || i.hdfc_owner);
+        if (!hasOwners || this.items.length < 90) {
+          console.log(`Syncing ${this.items.length} existing MongoDB items with updated 92 deliverables and owners...`);
+          this.initFromFiles();
+          await this.save();
+        }
       } else {
-        this.tableConfig = {
-          name: 'Deliverables Table',
-          customColumns: [],
-          columnOrder: ['ref', 'role', 'activity', 'owner', 'timeline', 'status', 'remarks', 'actions']
-        };
+        // First run: migrate existing local data (store.json / activity_log.json), else seed.json
+        this.initFromFiles();
+        this.useDb = true;
+        await this.save();
+        await this.saveLogs();
+        console.log(`Migrated ${this.items.length} items and ${this.activityLogs.length} log entries to MongoDB`);
+      }
+      console.log(`Loaded ${this.items.length} items from MongoDB`);
+
+      // Load table configuration / custom columns from MongoDB "tables" collection
+      try {
+        const tableDoc = await mongoDb.collection('tables').findOne({ _id: 'deliverables' });
+        if (tableDoc) {
+          this.tableConfig = {
+            name: tableDoc.name || 'Deliverables Table',
+            customColumns: tableDoc.customColumns || [],
+            columnOrder: tableDoc.columnOrder || []
+          };
+          console.log(`Loaded table configuration from MongoDB (${this.tableConfig.customColumns.length} custom columns)`);
+        } else {
+          this.tableConfig = {
+            name: 'Deliverables Table',
+            customColumns: [],
+            columnOrder: ['ref', 'role', 'activity', 'owner', 'actual', 'hdfc_owner', 'timeline', 'status', 'remarks', 'actions']
+          };
+        }
+      } catch (err) {
+        console.warn('Could not load table configuration from MongoDB:', err.message);
       }
     } catch (err) {
-      console.warn('Could not load table configuration from MongoDB:', err.message);
+      console.warn('MongoDB connection failed, falling back to local JSON files:', err.message);
+      this.useDb = false;
+      this.initFromFiles();
     }
   }
 
@@ -278,6 +292,8 @@ class DataStore {
       result = result.filter(item => 
         (item.activity && item.activity.toLowerCase().includes(q)) ||
         (item.partner_owner && item.partner_owner.toLowerCase().includes(q)) ||
+        (item.actual && item.actual.toLowerCase().includes(q)) ||
+        (item.hdfc_owner && item.hdfc_owner.toLowerCase().includes(q)) ||
         (item.ref && item.ref.toLowerCase().includes(q)) ||
         (item.remarks && item.remarks.toLowerCase().includes(q)) ||
         (item.milestone && item.milestone.toLowerCase().includes(q))

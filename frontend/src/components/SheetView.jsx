@@ -172,7 +172,7 @@ function EditableText({ value, onCommit, className = '', multiline = false }) {
   );
 }
 
-export default function SheetView({ onToast, items = [], onSyncItems }) {
+export default function SheetView({ onToast, items = [], onSyncItems, onOpenUploadModal }) {
   const [sheet, setSheet] = useState(loadSaved);
   const [workbook, setWorkbook] = useState(null);
   const fileRef = useRef(null);
@@ -224,6 +224,10 @@ export default function SheetView({ onToast, items = [], onSyncItems }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    if (onOpenUploadModal) {
+      onOpenUploadModal(file);
+      return;
+    }
     try {
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(await file.arrayBuffer());
