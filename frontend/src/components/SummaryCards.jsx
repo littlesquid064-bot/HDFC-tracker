@@ -94,9 +94,9 @@ export default function SummaryCards({ counts, activeFilter, onSelectFilter, fil
               <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
                 Career HUB Launch Readiness
               </span>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {/* <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 {completed} of {total} milestone deliverables completed
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
